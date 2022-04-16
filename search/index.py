@@ -23,8 +23,8 @@ class Index:
     def search(self, query):
         analyzed_query = analyze(query)
         results = self._results(analyzed_query)
-        documents = [self.documents[doc_id] for doc_id in set.intersection(*results)]
-
+        documents = [self.documents[doc_id] for doc_id in results[0].intersection(*results)]
+        
         return documents
 
 
