@@ -1,5 +1,4 @@
-from tokenizer import analyze
-from load import load
+from search.tokenizer import analyze
 
 class Index:
     def __init__(self):

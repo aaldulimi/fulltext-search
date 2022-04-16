@@ -1,4 +1,4 @@
-from document import Document
+from search.document import Document
 from lxml import etree
 
 def load(file_location):
