@@ -3,7 +3,6 @@ from selectolax.parser import HTMLParser
 import datetime
 import asyncio
 import aiohttp
-from document import Document
 import random
 import xml.dom.minidom
 import xml.etree.ElementTree as ET
@@ -56,26 +55,19 @@ async def get_article_data(session, url):
                 for p in paragraph:
                     if p: body += p.text()
 
-            
             doc = ET.Element('doc')
             ET.SubElement(doc, "title").text = title
-            ET.SubElement(doc, "body").text = body
             ET.SubElement(doc, "author").text = author
+            ET.SubElement(doc, "body").text = body
             ET.SubElement(doc, "datetime").text = date
             ET.SubElement(doc, "url").text = url
 
             dom = xml.dom.minidom.parseString(ET.tostring(doc))
-            xml_string = dom.toprettyxml()
+            doc = dom.childNodes[0].toprettyxml()
             
-            part1, part2 = xml_string.split('?>')
-            print(part2)
-
             with open("data.xml", 'a') as file:
-                file.write(part2)
+                file.write(doc)
                 file.close()
-
-
-            # print(article_count, title)
 
         return 
 
@@ -95,10 +87,8 @@ async def get_article_url(session, url):
                 article_count += 1
                 all_articles.append(asyncio.ensure_future(get_article_data(session, article_url)))
 
-
         collection = await asyncio.gather(*all_articles)
 
-         
 
 async def main():
     async with aiohttp.ClientSession(headers=headers) as session:

@@ -12,6 +12,7 @@ aiohttp = "^3.8.1"
 httpx = "^0.22.0"
 aiodns = "^3.0.0"
 PyStemmer = "^2.0.1"
+lxml = "^4.8.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

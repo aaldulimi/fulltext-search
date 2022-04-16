@@ -6,10 +6,10 @@ import datetime
 class Document:
     id: int 
     title: str
-    url: str
-    body: str
     author: str
+    body: str
     datetime: datetime.datetime
+    url: str
 
     @property
     def fulltext(self):
