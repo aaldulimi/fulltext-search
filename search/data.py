@@ -19,8 +19,8 @@ for node in HTMLParser(response.text).css('div > ol > li'):
         day_url = url + node.child.attrs['href']
         all_days.append(day_url)
 
-#conn = aiohttp.TCPConnector(limit=500)
-print("FETCH DONE")
+print('FETCH IS DONE')
+
 """
 async def fetch_articles():
     total = 0
@@ -36,7 +36,7 @@ async def fetch_articles():
             response = requests.get(article_url)
             article = HTMLParser(response.text)
 
-            title = article.css_first('h1').text()
+            # title = article.css_first('h1').text()
 
             # time:not(.header)
             date = article.css_first('time')
@@ -62,39 +62,46 @@ async def fetch_articles():
 
 
 asyncio.run(fetch_articles())
-
 """
-
 article_count = 0
-async def get_article(session, url):
+article_limit = 100
+
+
+async def get_article_data(session, url, article_count):
     async with session.get(url) as resp:
-        article_data = await resp.text()
-
-        if article_data:
-            global article_count
-            article_count += 1
+        # This is where each article is broken down and yielded        
+        response_text = await resp.text()
+        
+        if response_text:
+            #global article_count
             print(article_count, url)
+        return 
 
-            return 1
+async def get_article_url(session, url):
+    async with session.get(url) as resp:
+        day_data = await resp.text()
 
-# 2000 in 1.15
-# make getting day_url async, and make getting article_url async to o
+        all_articles = []
+        for node in HTMLParser(day_data).css('div > ul:nth-child(4) > li'):
+            if node.child.text() == "Read the document": continue
+            article_url = node.child.attrs['href']
+            if article_url.find('.com/interactive') != -1 or article_url.find('books/review/') != -1: continue
+
+            global article_count
+             
+            if article_count < article_limit:
+                article_count += 1
+                all_articles.append(asyncio.ensure_future(get_article_data(session, article_url, article_count)))
+
+        collection = await asyncio.gather(*all_articles)
+
 async def main():
     async with aiohttp.ClientSession() as session:
         tasks = []
         for day_url in all_days: 
-            response = requests.get(day_url)
+            tasks.append(asyncio.ensure_future(get_article_url(session, day_url)))
+        
+        collection = await asyncio.gather(*tasks)
 
-            for node in HTMLParser(response.text).css('div > ul:nth-child(4) > li'):
-                if node.child.text() == "Read the document": continue
-                article_url = node.child.attrs['href']
-
-                if article_url.find('.com/interactive') != -1 or article_url.find('books/review/') != -1: continue
-
-                tasks.append(asyncio.ensure_future(get_article(session, article_url)))
-
-        transaction_count = await asyncio.gather(*tasks)
-       
-        return 
 
 asyncio.run(main())
