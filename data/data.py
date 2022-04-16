@@ -7,9 +7,6 @@ import random
 import xml.dom.minidom
 import xml.etree.ElementTree as ET
 
-
-ARTICLE_LIMIT = 100
-
 headers = {
     'user-agent': f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.{random.randint(0, 9999)} Safari/537.{random.randint(0, 99)}'  
 }
@@ -19,6 +16,10 @@ all_days = []
 base_url = 'https://www.nytimes.com/sitemap/2021/'
 response = requests.get(base_url, headers=headers)
 
+with open("data/data.xml", 'w') as file:
+    file.write('<documents>\n')
+    file.close()
+
 for node in HTMLParser(response.text).css('div > ol > li'):
     url = base_url + node.child.attrs['href']
 
@@ -27,9 +28,9 @@ for node in HTMLParser(response.text).css('div > ol > li'):
         day_url = url + node.child.attrs['href']
         all_days.append(day_url)
 
-print('FETCH IS DONE')
 
 article_count = 0
+to_load = []
 async def get_article_data(session, url):
     async with session.get(url) as resp:
         response_text = await resp.text()
@@ -37,13 +38,19 @@ async def get_article_data(session, url):
         if response_text:            
             article = HTMLParser(response_text)
 
-            title = article.css_first('h1').text()
+            title = article.css_first('h1')
+            if title == None: return 
+            title = title.text()
 
-            date = article.css_first('time')
-            date = date.attributes['datetime']
-            if 'Z' in date: date = date[:date.find('.000Z')] + '+00:00'
-            date = datetime.datetime.fromisoformat(date)
-            date = date.strftime('%Y-%m-%d %H:%M:%S')
+            try:
+                date = article.css_first('time')
+                date = date.attributes['datetime']
+                if 'Z' in date: date = date[:date.find('.000Z')] + '+00:00'
+                date = datetime.datetime.fromisoformat(date)
+                date = date.strftime('%Y-%m-%d %H:%M:%S')
+
+            except:
+                date = ''
 
             author = article.css_first('span.last-byline')
             if author == None: author = 'unkown' 
@@ -64,11 +71,20 @@ async def get_article_data(session, url):
 
             dom = xml.dom.minidom.parseString(ET.tostring(doc))
             doc = dom.childNodes[0].toprettyxml()
-            
-            with open("data.xml", 'a') as file:
-                file.write(doc)
-                file.close()
 
+            global to_load, article_count
+            to_load.append(doc)
+            
+            if len(to_load) >= 10:
+                with open("data/data.xml", 'a') as file:
+                    for doc in to_load:
+                        file.write(doc)
+
+                    file.close()
+
+                to_load = []
+                
+            article_count += 1
         return 
 
 async def get_article_url(session, url):
@@ -81,11 +97,7 @@ async def get_article_url(session, url):
             article_url = node.child.attrs['href']
             if article_url.find('.com/interactive') != -1 or article_url.find('books/review/') != -1: continue
             
-            global article_count
-
-            if article_count < ARTICLE_LIMIT: 
-                article_count += 1
-                all_articles.append(asyncio.ensure_future(get_article_data(session, article_url)))
+            all_articles.append(asyncio.ensure_future(get_article_data(session, article_url)))
 
         collection = await asyncio.gather(*all_articles)
 
@@ -93,10 +105,15 @@ async def get_article_url(session, url):
 async def main():
     async with aiohttp.ClientSession(headers=headers) as session:
         tasks = []
-        for day_url in all_days: 
+        for day_url in all_days[:10]: 
             tasks.append(asyncio.ensure_future(get_article_url(session, day_url)))
         
         collection = await asyncio.gather(*tasks)
 
 
 asyncio.run(main())
+
+
+with open("data/data.xml", 'a') as file:
+    file.write('</documents>')
+    file.close()

@@ -14,7 +14,7 @@ if __name__ == "__main__":
     index = build_index(load('data/data.xml'), index)
 
     max_results = 5
-    search_query = 'capitol riots'
+    search_query = 'football'
 
     start_time = time.time()
     result = index.search(search_query)
