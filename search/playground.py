@@ -4,7 +4,7 @@ import time
 
 
 def build_index(load_data, index):
-    for _, document in enumerate(load_data):
+    for document in enumerate(load_data):
         index.index_document(document)
 
     return index
